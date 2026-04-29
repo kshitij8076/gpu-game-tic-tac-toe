@@ -9,6 +9,20 @@ A CUDA Tic-Tac-Toe project where two GPU-driven players compete using different 
 
 The board is updated turn-by-turn on the host, while both players use GPU kernels for move selection.
 
+## Improvements Added
+
+- Added robust CUDA runtime error checking via `CUDA_CHECK(...)`
+- Removed unused CUDA random header dependency
+- Split gameplay into clearer functions:
+  - `selectMoveX(...)`
+  - `selectMoveO(...)`
+  - `runSingleGame(...)`
+- Added CLI options:
+  - `--seed N` for reproducible randomness
+  - `--games N` to run multiple matches and print aggregate stats
+  - `--quiet` to disable per-turn board printing
+- Added summary statistics at the end of execution (`X wins`, `O wins`, `Draws`)
+
 ## Game Logic
 
 1. Board representation uses 9 integers (`0 = empty`, `1 = X`, `-1 = O`)
@@ -21,44 +35,54 @@ The board is updated turn-by-turn on the host, while both players use GPU kernel
    - One thread per cell
    - Collects empty-cell indices with `atomicAdd`
    - Host picks a random index from collected empty cells
-5. Host applies the selected move, prints the board, and checks win/draw
-6. Loop continues until win or draw
+5. Host applies selected move, checks win/draw, and optionally prints board state
+6. Loop continues until game end for each game; when `--games > 1`, aggregate stats are printed
 
-## Refactor Note
-
-`src/tictactoe.cu` was rewritten in a cleaner structure without changing gameplay behavior.
-
-Refactor highlights:
-- Added constants (`kBoardSize`, `kGridSide`, `kCenterCell`) instead of raw literals
-- Split X decision logic into helpers (`doesMoveWin`, `scoreMoveForX`)
-- Kept the same kernels, turn order, move priorities, and end conditions
-
-## Build and Run
+## Build
 
 ```bash
 make clean build
-./tictactoe.exe
 ```
 
 If `nvcc` is not found, install CUDA Toolkit and ensure `nvcc` is available in your PATH.
 
-## Expected Output (Example)
+## Run
+
+Single game with default settings:
+
+```bash
+./tictactoe.exe
+```
+
+Run multiple games without board output:
+
+```bash
+./tictactoe.exe --games 1000 --quiet
+```
+
+Run with a custom seed:
+
+```bash
+./tictactoe.exe --seed 123 --games 50 --quiet
+```
+
+Show help:
+
+```bash
+./tictactoe.exe --help
+```
+
+## Example Summary Output
 
 ```text
-=== GPU vs GPU Tic-Tac-Toe ===
-Player X: Aggressive Strategy (GPU Kernel)
-Player O: Random Strategy (GPU Kernel)
-
-Turn 1 - GPU Player X chose cell 4:
- . | . | .
------------
- . | X | .
------------
- . | . | .
+=== Summary ===
+X wins: 742
+O wins: 108
+Draws : 150
 ```
 
 ## Project Files
 
-- `src/tictactoe.cu`: CUDA kernels and host game loop
+- `src/tictactoe.cu`: CUDA kernels + host game flow + CLI parsing + stats
 - `Makefile`: build/run targets
 - `README.md`: project documentation
